@@ -1,6 +1,9 @@
+from datetime import datetime 
 from discord import Intents
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from discord import Embed
 from discord.ext.commands import Bot as BotBase
+
 
 PREFIX = "+"
 OWNER_IDS = [294533591902453760]
@@ -40,6 +43,23 @@ class Bot(BotBase):
             self.ready = True
             self.guild = self.get_guild(775380493914996776)
             print("Bot ready")
+
+            channel = self.get_channel(775380493914996779)
+            await channel.send("Jsem online!")
+
+            embed = Embed(title="Jsem online!", description="Hlídací pes je online.", 
+                          colour=0xFF0000, timestamp=datetime.utcnow())
+            fields = [("Name", "Value", True),
+                      ("Another field", "This field is next to the other one.", True),
+                      ("A non-inline field", "This field will appear on it!s own row", False)]
+            for name, value, inline in fields:                      
+                embed.add_field(name=name, value=value, inline=inline)
+            embed.set_author(name="Hlídací pes", icon_url=self.guild.icon_url)
+            embed.set_footer(text="This is a footer!")
+            embed.set_thumbnail(url=self.guild.icon_url)
+            embed.set_image(url=self.guild.icon_url)
+            await channel.send(embed=embed)
+
 
         else:
             print("Bot reconnected")
