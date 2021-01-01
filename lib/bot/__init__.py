@@ -41,6 +41,9 @@ class Bot(BotBase):
     async def on_error(self, err, *args, **kwargs):
         if err == "on_command_error":
             await args[0].send("Something went wrong.")
+
+        channel = self.get_channel(775380493914996779)
+        await channel.send("An error occured")
         raise
 
     async def on_command_error(self, ctx, ext):
