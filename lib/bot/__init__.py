@@ -3,7 +3,7 @@ from discord import Intents
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from discord import Embed
 from discord.ext.commands import Bot as BotBase
-
+from discord.ext.commands import CommandNotFound
 
 PREFIX = "+"
 OWNER_IDS = [294533591902453760]
@@ -38,6 +38,21 @@ class Bot(BotBase):
     async def on_disconnect(self):
         print("bot disconnected")
 
+    async def on_error(self, err, *args, **kwargs):
+        if err == "on_command_error":
+            await args[0].send("Something went wrong.")
+        raise
+
+    async def on_command_error(self, ctx, ext):
+        if isinstance(exc, CommandNotFound):
+            pass
+
+        elif hasattr(exc,"original"):
+            raise exc.original
+
+        else:
+            raise exc
+
     async def on_ready(self):
         if not self.ready:
             self.ready = True
@@ -58,7 +73,9 @@ class Bot(BotBase):
             embed.set_footer(text="This is a footer!")
             embed.set_thumbnail(url=self.guild.icon_url)
             embed.set_image(url=self.guild.icon_url)
+
             await channel.send(embed=embed)
+            #await channel.send(file=File("./data/images"))
 
 
         else:
