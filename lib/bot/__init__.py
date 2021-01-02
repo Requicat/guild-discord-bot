@@ -1,4 +1,8 @@
-from datetime import datetime 
+from asyncio import sleep
+
+from datetime import datetime
+from glob import glob
+
 from discord import Intents
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -12,13 +16,27 @@ from ..db import db
 
 PREFIX = "+"
 OWNER_IDS = [294533591902453760]
+COGS = [path.split("\\")[-1][:-3] for path in glob("./lib/cogs/*.py")]
+
+class Ready(object):
+    def __init__(self):
+        for cog in COGS:
+            setattr(self, cog, False)
+
+    def ready_up(self, cog):
+        setattr(self, cog, True)
+        print(f"{cog} cog ready")
+
+    def all_ready(self):
+        return all([getattr(self, cog) for cog in COGS])
+
 
 
 class Bot(BotBase):
     def __init__(self):
         self.PREFIX = PREFIX
         self.ready = False
-
+        self.cogs_ready = Ready()
         self.guild = None
         self.scheduler = AsyncIOScheduler()
 
@@ -30,9 +48,19 @@ class Bot(BotBase):
             intents=Intents.all(),
 
             )
+
+    def setup(self):
+        for cog in COGS:
+            self.load_extension(f"lib.cogs.{cog}")
+            print(f"{cog} cog is loaded")
+
+        print("setup complete")
     
     def run(self, version):
         self.VERSION = version
+
+        print("running setup...")
+        self.setup()
 
         with open("./lib/bot/token.0", "r", encoding="utf-8") as tf:
             self.TOKEN = tf.read()
@@ -41,8 +69,7 @@ class Bot(BotBase):
         super().run(self.TOKEN, reconnect=True)
 
     async def rules_reminder(self):
-        channel = self.get_channel(775380493914996779)
-        await channel.send("Pravidla sem flákni")
+        await self.stdout.send("Pravidla sem flákni")
 
 
     async def on_connect(self):
@@ -55,29 +82,28 @@ class Bot(BotBase):
         if err == "on_command_error":
             await args[0].send("Something went wrong.")
 
-        channel = self.get_channel(775380493914996779)
-        await channel.send("An error occured")
+        await self.stdout.send("An error occured")
         raise
 
     async def on_command_error(self, ctx, ext):
         if isinstance(exc, CommandNotFound):
             pass
 
-        elif hasattr(exc,"original"):
+        elif hasattr(exc,"original"): #Shows original exception, way more cleaner 
             raise exc.original
 
         else:
-            raise exc
+            raise exc #Shows a lot of shits in case we don't have original exception path
 
     async def on_ready(self):
         if not self.ready:
-            self.ready = True
             self.guild = self.get_guild(775380493914996776)
-            self.scheduler.add_job(self.rules_reminder, CronTrigger(day_of_week="1,3,7", hour=12, minute=0, second=0))
+            self.stdout = self.get_channel(775380493914996779) #Standart output with channel ID, use instead of "channel = self.get_channel(###-###-###)" for every instance
+            self.scheduler.add_job(self.rules_reminder, CronTrigger(day_of_week="0,2,6", hour=12, minute=0, second=0))
             self.scheduler.start()
-            print("Bot ready")
 
-            channel = self.get_channel(775380493914996779)
+            await self.stdout.send("Jsem online!")
+
             
 
             # embed = Embed(title="Jsem online!", description="Hlídací pes je online.", 
@@ -95,7 +121,13 @@ class Bot(BotBase):
             # await channel.send(embed=embed)
             #await channel.send(file=File("./data/images"))
 
-            await channel.send("Jsem online!")
+            while not self.cogs_ready.all_ready():
+                await sleep(0.5)
+
+            self.ready = True
+            print("Bot ready")
+
+            
 
         else:
             print("Bot reconnected")
