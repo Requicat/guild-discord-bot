@@ -6,15 +6,16 @@ from glob import glob
 from discord import Intents
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from discord import Embed
+from discord import Embed, File
 from discord.ext.commands import Bot as BotBase
+from discord.ext.commands import Context
 from discord.ext.commands import CommandNotFound
 
 from ..db import db
 
 
 
-PREFIX = "+"
+PREFIX = ('!', '+', '?', '/')
 OWNER_IDS = [294533591902453760]
 COGS = [path.split("\\")[-1][:-3] for path in glob("./lib/cogs/*.py")]
 
@@ -68,6 +69,16 @@ class Bot(BotBase):
         print("Running bot...")
         super().run(self.TOKEN, reconnect=True)
 
+    async def process_commands(self, message):
+        ctx = await self.get_context(message, cls=Context)
+
+        if ctx.command is not None and ctx.guild is not None:
+            if self.ready:
+                await self.invoke(ctx)
+
+            else:
+                await ctx.send("I'm not ready to receive commands, please wait a few seconds.")
+
     async def rules_reminder(self):
         await self.stdout.send("Pravidla sem flákni")
 
@@ -85,7 +96,7 @@ class Bot(BotBase):
         await self.stdout.send("An error occured")
         raise
 
-    async def on_command_error(self, ctx, ext):
+    async def on_command_error(self, ctx, exc):
         if isinstance(exc, CommandNotFound):
             pass
 
@@ -119,7 +130,7 @@ class Bot(BotBase):
             # embed.set_image(url=self.guild.icon_url)
 
             # await channel.send(embed=embed)
-            #await channel.send(file=File("./data/images"))
+            #await channel.send(file=File("./data/images")) /////// NEFUNGOVALO PROOTŽE NEBYLO IMPROTNUTÝ File, zkus to znova až se k tomu dokopeša
 
             while not self.cogs_ready.all_ready():
                 await sleep(0.5)
@@ -133,6 +144,7 @@ class Bot(BotBase):
             print("Bot reconnected")
 
     async def on_message(self, message):
-        pass
+        if not message.author.bot:
+            await self.process_commands(message)
 
 bot = Bot()     
